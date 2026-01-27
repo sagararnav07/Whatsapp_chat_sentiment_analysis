@@ -5,5 +5,4 @@ urlextract
 wordcloud
 pandas
 numpy
-openai
 emoji
