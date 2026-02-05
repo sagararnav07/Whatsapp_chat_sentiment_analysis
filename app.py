@@ -264,171 +264,359 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Intelligent AI Chat using Groq (Llama 3.3) with conversation memory
+# ============================================
+# ADVANCED AI ENGINE - ChatSense AI v2.0
+# ============================================
+
+# Initialize semantic search model (cached for performance)
+@st.cache_resource
+def load_embedding_model():
+    """Load sentence transformer model for semantic search"""
+    try:
+        from sentence_transformers import SentenceTransformer
+        return SentenceTransformer('all-MiniLM-L6-v2')  # Fast & accurate
+    except Exception as e:
+        print(f"Embedding model not available: {e}")
+        return None
+
+# Cache embeddings for the current chat
+@st.cache_data
+def compute_message_embeddings(messages_text):
+    """Compute embeddings for all messages"""
+    model = load_embedding_model()
+    if model is None or not messages_text:
+        return None
+    try:
+        return model.encode(messages_text, show_progress_bar=False)
+    except:
+        return None
+
+def semantic_search(query, df, top_k=10):
+    """Find most relevant messages using semantic similarity"""
+    model = load_embedding_model()
+    if model is None or df is None or len(df) == 0:
+        return []
+    
+    try:
+        # Prepare messages
+        messages = df[['user', 'message', 'date']].copy()
+        messages['text'] = messages['user'] + ': ' + messages['message'].astype(str)
+        messages_list = messages['text'].tolist()
+        
+        # Get embeddings (cached)
+        embeddings = compute_message_embeddings(tuple(messages_list))
+        if embeddings is None:
+            return []
+        
+        # Encode query and find similar
+        query_embedding = model.encode([query], show_progress_bar=False)
+        
+        from sklearn.metrics.pairwise import cosine_similarity
+        similarities = cosine_similarity(query_embedding, embeddings)[0]
+        
+        # Get top-k results
+        top_indices = similarities.argsort()[-top_k:][::-1]
+        
+        results = []
+        for idx in top_indices:
+            if similarities[idx] > 0.3:  # Relevance threshold
+                results.append({
+                    'user': messages.iloc[idx]['user'],
+                    'message': messages.iloc[idx]['message'],
+                    'date': messages.iloc[idx]['date'].strftime('%Y-%m-%d'),
+                    'score': round(similarities[idx], 3)
+                })
+        return results
+    except Exception as e:
+        print(f"Semantic search error: {e}")
+        return []
+
+def analyze_conversation_dynamics(df):
+    """Deep analysis of conversation patterns"""
+    if df is None or len(df) == 0:
+        return {}
+    
+    try:
+        users = [u for u in df['user'].unique() if u != 'group_notification']
+        
+        analysis = {
+            'total_messages': len(df),
+            'users': users,
+            'user_stats': {},
+            'conversation_starters': {},
+            'response_patterns': {},
+            'active_hours': {},
+            'topics': []
+        }
+        
+        # Per-user deep analysis
+        for user in users:
+            user_df = df[df['user'] == user]
+            user_msgs = user_df['message'].astype(str)
+            
+            # Word count analysis
+            word_counts = user_msgs.apply(lambda x: len(x.split()))
+            
+            # Question detection
+            questions = user_msgs.str.contains(r'\?', regex=True).sum()
+            
+            # Media sharing
+            media = user_msgs.str.contains('<Media omitted>', case=False).sum()
+            
+            # Link sharing
+            links = user_msgs.str.contains(r'http[s]?://', regex=True).sum()
+            
+            # Emoji usage
+            import emoji
+            emoji_count = sum(len([c for c in str(msg) if c in emoji.EMOJI_DATA]) for msg in user_msgs)
+            
+            analysis['user_stats'][user] = {
+                'messages': len(user_df),
+                'words': int(word_counts.sum()),
+                'avg_words_per_msg': round(word_counts.mean(), 1),
+                'questions_asked': int(questions),
+                'media_shared': int(media),
+                'links_shared': int(links),
+                'emojis_used': emoji_count,
+                'percentage': round(len(user_df) / len(df) * 100, 1)
+            }
+        
+        # Conversation starters (first message of the day)
+        df_sorted = df.sort_values('date')
+        daily_first = df_sorted.groupby(df_sorted['date'].dt.date).first()
+        starter_counts = daily_first['user'].value_counts().to_dict()
+        analysis['conversation_starters'] = starter_counts
+        
+        # Response time analysis (simplified)
+        df_sorted = df.sort_values('date').reset_index(drop=True)
+        if len(df_sorted) > 1:
+            df_sorted['time_diff'] = df_sorted['date'].diff().dt.total_seconds() / 60  # in minutes
+            df_sorted['prev_user'] = df_sorted['user'].shift(1)
+            
+            for user in users:
+                responses = df_sorted[(df_sorted['user'] == user) & (df_sorted['prev_user'] != user)]
+                if len(responses) > 0:
+                    avg_response = responses['time_diff'].median()
+                    analysis['response_patterns'][user] = {
+                        'median_response_minutes': round(avg_response, 1) if avg_response < 1440 else 'varies'
+                    }
+        
+        # Peak hours per user
+        for user in users:
+            user_hours = df[df['user'] == user]['hour'].value_counts().head(3).to_dict()
+            analysis['active_hours'][user] = list(user_hours.keys())
+        
+        # Topic extraction (keyword-based)
+        from collections import Counter
+        all_text = ' '.join(df['message'].astype(str).str.lower())
+        words = [w for w in all_text.split() if len(w) > 4 and not w.startswith('http')]
+        
+        # Filter common words
+        stopwords = {'media', 'omitted', 'would', 'could', 'should', 'about', 'there', 'their', 'which', 'where', 'these', 'those', 'after', 'before', 'being', 'other'}
+        words = [w for w in words if w not in stopwords]
+        
+        common_topics = Counter(words).most_common(10)
+        analysis['topics'] = [w[0] for w in common_topics]
+        
+        return analysis
+    except Exception as e:
+        print(f"Analysis error: {e}")
+        return {}
+
+# Intelligent AI Chat using Groq (Llama 3.3) with RAG & Advanced Analytics
 def get_bot_response(user_message, df=None, selected_user="Overall", conversation_history=None):
-    """Get intelligent AI response using Groq API with conversation memory"""
+    """Get super-intelligent AI response using Groq API with RAG and deep analytics"""
+    
+    # ===== RAG: Semantic Search for Relevant Messages =====
+    relevant_messages = ""
+    if df is not None and len(df) > 0:
+        search_results = semantic_search(user_message, df, top_k=8)
+        if search_results:
+            relevant_messages = "\n## 🔍 RELEVANT MESSAGES (Found via AI Search):\n"
+            for r in search_results:
+                relevant_messages += f"- [{r['date']}] {r['user']}: {r['message'][:200]}\n"
+    
+    # ===== Deep Analytics =====
+    deep_analysis = ""
+    if df is not None and len(df) > 0:
+        analysis = analyze_conversation_dynamics(df)
+        if analysis:
+            deep_analysis = "\n## 📊 DEEP CONVERSATION ANALYSIS:\n"
+            
+            # User detailed stats
+            if 'user_stats' in analysis:
+                deep_analysis += "\n### Per-User Intelligence:\n"
+                for user, stats in analysis['user_stats'].items():
+                    deep_analysis += f"**{user}**:\n"
+                    deep_analysis += f"  - Messages: {stats['messages']} ({stats['percentage']}%)\n"
+                    deep_analysis += f"  - Words: {stats['words']:,} (avg {stats['avg_words_per_msg']} per msg)\n"
+                    deep_analysis += f"  - Questions asked: {stats['questions_asked']}\n"
+                    deep_analysis += f"  - Media shared: {stats['media_shared']}\n"
+                    deep_analysis += f"  - Links shared: {stats['links_shared']}\n"
+                    deep_analysis += f"  - Emojis used: {stats['emojis_used']}\n"
+            
+            # Conversation starters
+            if 'conversation_starters' in analysis and analysis['conversation_starters']:
+                deep_analysis += "\n### Who Starts Conversations:\n"
+                for user, count in analysis['conversation_starters'].items():
+                    deep_analysis += f"  - {user}: {count} days\n"
+            
+            # Response patterns
+            if 'response_patterns' in analysis and analysis['response_patterns']:
+                deep_analysis += "\n### Response Speed:\n"
+                for user, pattern in analysis['response_patterns'].items():
+                    deep_analysis += f"  - {user}: ~{pattern['median_response_minutes']} min median response\n"
+            
+            # Active hours
+            if 'active_hours' in analysis and analysis['active_hours']:
+                deep_analysis += "\n### Peak Active Hours:\n"
+                for user, hours in analysis['active_hours'].items():
+                    deep_analysis += f"  - {user}: {', '.join([f'{h}:00' for h in hours])}\n"
+            
+            # Topics
+            if 'topics' in analysis and analysis['topics']:
+                deep_analysis += f"\n### Main Topics/Keywords: {', '.join(analysis['topics'][:8])}\n"
     
     # Build context about the chat data
     chat_context = ""
     if df is not None and len(df) > 0:
         try:
-            # Get users
             users = df['user'].unique().tolist()
             if 'group_notification' in users:
                 users.remove('group_notification')
             
-            # Basic stats
             total_msgs = len(df)
             total_words = df['message'].apply(lambda x: len(str(x).split())).sum()
-            
-            # User message counts
             user_counts = df[df['user'] != 'group_notification']['user'].value_counts().head(10).to_dict()
-            
-            # Date range
             first_date = df['date'].min().strftime('%B %d, %Y')
             last_date = df['date'].max().strftime('%B %d, %Y')
             duration = (df['date'].max() - df['date'].min()).days
-            
-            # Peak hour
             hourly = df.groupby('hour').size()
             peak_hour = hourly.idxmax() if len(hourly) > 0 else 0
-            
-            # Media count
             media_count = df[df['message'].str.contains('<Media omitted>', case=False, na=False)].shape[0]
             
-            # Sample recent messages (more for better context)
-            sample_msgs = df.tail(100)[['user', 'message']].values.tolist()
-            sample_text = "\n".join([f"{m[0]}: {m[1][:150]}" for m in sample_msgs[-50:]])
-            
-            # Word frequency analysis
-            try:
-                from collections import Counter
-                all_words = ' '.join(df['message'].astype(str)).lower().split()
-                common_words = Counter([w for w in all_words if len(w) > 3]).most_common(15)
-                common_words_text = ", ".join([f"{w[0]} ({w[1]}x)" for w in common_words])
-            except:
-                common_words_text = "Not available"
-            
-            # Emoji analysis
-            try:
-                emoji_df = helper.emoji_analysis("Overall", df)
-                top_emojis = emoji_df.head(5).to_dict('records') if len(emoji_df) > 0 else []
-            except:
-                top_emojis = []
-            
-            # Sentiment analysis
+            # Sentiment
             try:
                 sentiment_df = helper.sentiment_analysis("Overall", df)
                 if sentiment_df is not None and len(sentiment_df) > 0:
                     positive = len(sentiment_df[sentiment_df['sentiment'] == 'Positive'])
                     negative = len(sentiment_df[sentiment_df['sentiment'] == 'Negative'])
                     neutral = len(sentiment_df[sentiment_df['sentiment'] == 'Neutral'])
-                    sentiment_info = f"Positive: {positive}, Neutral: {neutral}, Negative: {negative}"
+                    sentiment_info = f"Positive: {positive} ({round(positive/total_msgs*100,1)}%), Neutral: {neutral} ({round(neutral/total_msgs*100,1)}%), Negative: {negative} ({round(negative/total_msgs*100,1)}%)"
                 else:
                     sentiment_info = "Not analyzed"
             except:
                 sentiment_info = "Not analyzed"
             
             chat_context = f"""
-## UPLOADED CHAT DATA:
+## 📱 CHAT OVERVIEW:
 - **Participants**: {', '.join(users)}
 - **Total Messages**: {total_msgs:,}
 - **Total Words**: {total_words:,}
 - **Media Shared**: {media_count}
 - **Date Range**: {first_date} to {last_date} ({duration} days)
-- **Peak Activity Hour**: {peak_hour}:00
-- **Currently Viewing**: {selected_user}
+- **Peak Hour**: {peak_hour}:00
 
-## MESSAGE COUNTS BY USER:
-{chr(10).join([f"- {user}: {count} messages ({round(count/total_msgs*100, 1)}%)" for user, count in user_counts.items()])}
+## 📈 MESSAGE DISTRIBUTION:
+{chr(10).join([f"- {user}: {count:,} messages ({round(count/total_msgs*100, 1)}%)" for user, count in user_counts.items()])}
 
-## TOP EMOJIS:
-{chr(10).join([f"- {e['Emoji']}: {e['Count']} times" for e in top_emojis]) if top_emojis else "No emoji data"}
-
-## SENTIMENT ANALYSIS:
+## 💭 SENTIMENT BREAKDOWN:
 {sentiment_info}
-
-## MOST COMMON WORDS:
-{common_words_text}
-
-## RECENT MESSAGES SAMPLE (for context):
-{sample_text}
+{deep_analysis}
+{relevant_messages}
 """
         except Exception as e:
             chat_context = f"Chat data available but error extracting details: {str(e)}"
     else:
-        chat_context = "No chat has been uploaded yet."
+        chat_context = "No chat has been uploaded yet. Ask the user to upload a WhatsApp chat export."
     
-    # System prompt - Enhanced for better intelligence
-    system_prompt = f"""You are ChatSense AI 🤖, an expert WhatsApp chat analyst. You're highly intelligent, insightful, and can provide deep analysis of conversations.
+    # ===== SUPER INTELLIGENT SYSTEM PROMPT =====
+    system_prompt = f"""You are ChatSense AI v2.0 🧠 - an extraordinarily intelligent WhatsApp conversation analyst with PhD-level expertise in communication analysis, behavioral psychology, and data science.
 
 {chat_context}
 
-## YOUR SUPERPOWERS:
-1. **Data Analysis** - Analyze message counts, word frequencies, timing patterns
-2. **Relationship Insights** - Understand communication dynamics between participants
-3. **Behavioral Patterns** - Identify who initiates conversations, response patterns, active hours
-4. **Emotional Intelligence** - Interpret sentiment, tone, and mood from messages
-5. **Trend Detection** - Spot changes in communication over time
+## 🎯 YOUR MISSION:
+You don't just answer questions - you provide INSIGHTS that surprise and delight users. You notice patterns humans miss. You make connections that reveal relationship dynamics.
 
-## SMART ANALYSIS TIPS:
-- Calculate percentages (e.g., "User A sends 65% of messages")
-- Compare users (e.g., "User A is 2x more active than User B")
-- Identify peak hours and what that might mean
-- Notice patterns in message samples
-- Infer relationship dynamics from the data
+## 🧠 THINKING PROCESS (Use this for complex questions):
+1. **Understand**: What is the user REALLY asking? What do they want to know?
+2. **Analyze**: What data points are relevant? What patterns exist?
+3. **Synthesize**: Connect multiple data points to form insights
+4. **Deliver**: Present findings clearly with specific numbers
 
-## WHEN ANSWERING:
-- Start with the direct answer, then provide context
-- Use specific numbers from the data
-- Add insights and observations
-- Be conversational and engaging
-- Use relevant emojis to make responses lively 😊📊💬
+## 💡 INTELLIGENCE CAPABILITIES:
+1. **Pattern Recognition** - Spot communication patterns, habits, rhythms
+2. **Behavioral Analysis** - Who initiates? Who responds? Communication styles?
+3. **Relationship Dynamics** - Balance of conversation, engagement levels
+4. **Temporal Analysis** - When do they talk? Night owls? Morning people?
+5. **Semantic Understanding** - What topics dominate? Emotional undertones?
+6. **Predictive Insights** - What does the data suggest about the relationship?
 
-## EXAMPLE SMART RESPONSES:
-- "There are 289 messages! 📊 Kartik leads with 168 (58%), while Arnav sent 121 (42%). Looks like Kartik is the more active texter!"
-- "Peak hour is 12:00 PM 🕐 - seems like lunch break chats! Night owls? Let me check the late-night activity..."
-- "The sentiment is mostly neutral, which is typical for casual friend chats. Want me to look for specific emotional moments?"
+## 🎨 RESPONSE STYLE:
+- Start with a DIRECT answer, then expand with insights
+- Use specific numbers and percentages
+- Add emoji to make responses engaging but professional
+- Provide unexpected insights ("Did you know...?")
+- Be conversational yet authoritative
+- For complex questions, show your reasoning briefly
 
-## APP FEATURES YOU CAN EXPLAIN:
-- 📊 Overview Tab: Stats, trends, daily message counts
-- 💭 Sentiment Tab: AI-powered mood analysis
-- 😀 Emoji Tab: Who uses which emojis most
-- ⏰ Activity Tab: When people chat, response times, night owl detection
-- 🔍 Deep Dive: Word clouds, common words, chat streaks
+## 📝 EXAMPLE RESPONSES:
 
-## IF NO CHAT UPLOADED:
-Guide them: "Upload your WhatsApp chat (.txt file) using the sidebar to unlock powerful insights! 📁"
+**Q: "How many messages?"**
+**A:** 📊 There are **289 messages** in this chat!
 
-Remember: You have access to the ACTUAL chat data above. Use it to give personalized, specific answers!"""
+Here's the breakdown:
+- Kartik Infy leads with **168 messages (58%)**
+- Arnav sent **121 messages (42%)**
+
+💡 *Insight: Kartik is 1.4x more active, but Arnav's messages tend to be longer. The conversation is fairly balanced for a friendship!*
+
+**Q: "Tell me something interesting"**
+**A:** 🔍 Here's something fascinating about this chat:
+
+**The Night Owl Effect** 🦉
+Kartik sends 23% of messages between 11 PM - 2 AM, while Arnav is mostly active during lunch (12-2 PM). You have complementary schedules!
+
+**The Question Ratio** ❓
+Arnav asks 2x more questions than Kartik, suggesting he often drives the conversation topics.
+
+**Hidden Pattern** 🔮
+Your longest chat streaks happen around weekends. Friendship maintenance mode activated on Saturdays!
+
+## ⚠️ IMPORTANT RULES:
+- ALWAYS use the actual data provided above
+- If you find relevant messages via AI Search, reference them
+- If asked about specific topics, search the relevant messages section
+- Never make up statistics - use only what's in the data
+- If something can't be determined, say so honestly
+
+Remember: You're not just an assistant - you're a conversation ANALYST who reveals hidden patterns and provides genuine value!"""
 
     try:
         if not groq_client:
             return "❌ AI is not configured. Please set up the GROQ_API_KEY in secrets."
         
-        # Build messages with conversation history for context
+        # Build messages with conversation history
         messages = [{"role": "system", "content": system_prompt}]
         
-        # Add conversation history for memory (last 6 exchanges)
+        # Add conversation history for memory (last 8 exchanges)
         if conversation_history and len(conversation_history) > 1:
-            # Skip the initial greeting, take last 6 messages
-            recent_history = conversation_history[-7:-1] if len(conversation_history) > 7 else conversation_history[1:-1]
+            recent_history = conversation_history[-9:-1] if len(conversation_history) > 9 else conversation_history[1:-1]
             for msg in recent_history:
-                messages.append({"role": msg["role"], "content": msg["content"][:500]})  # Truncate for token limit
+                messages.append({"role": msg["role"], "content": msg["content"][:500]})
         
-        # Add current user message
         messages.append({"role": "user", "content": user_message})
         
-        # Call Groq API with Llama 3.3 (latest model)
+        # Call Groq API with Llama 3.3
         response = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=messages,
             temperature=0.7,
-            max_tokens=1024,
+            max_tokens=1500,  # More tokens for detailed responses
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"❌ AI Error: {str(e)}\n\nPlease try again or check your internet connection."
+        return f"❌ AI Error: {str(e)}\n\nPlease try again."
 
 # Custom CSS - Dark Theme
 st.markdown("""
@@ -494,7 +682,7 @@ if 'show_botpress' not in st.session_state:
     st.session_state.show_botpress = True
 if 'chat_messages' not in st.session_state:
     st.session_state.chat_messages = [
-        {"role": "assistant", "content": "👋 Hey there! I'm **ChatSense AI** 🤖 - your intelligent WhatsApp analyst!\n\n**What I can do:**\n• 📊 Analyze your chat data in depth\n• 🔍 Find patterns & insights you might miss\n• 💬 Answer any question about your conversations\n• 🧠 Remember our conversation for context\n\n**Try asking me:**\n• \"How many messages are there?\"\n• \"Who talks more?\"\n• \"What's the vibe of this chat?\"\n• \"When are we most active?\"\n\nUpload a chat to get started! 🚀"}
+        {"role": "assistant", "content": "👋 Hey there! I'm **ChatSense AI v2.0** 🧠 - your **super-intelligent** WhatsApp analyst powered by advanced AI!\n\n**🚀 What makes me special:**\n• 🔬 **Semantic Search** - I find relevant messages using AI embeddings\n• 🧮 **Deep Analytics** - Response times, conversation patterns, topic detection\n• 🎯 **RAG-Powered** - I reference actual messages when answering\n• 💭 **Contextual Memory** - I remember our conversation\n• 🧠 **PhD-Level Analysis** - Psychological & sociological insights\n\n**💡 Try asking me:**\n• \"Who initiates conversations more?\"\n• \"What topics do we discuss most?\"\n• \"Analyze our communication patterns\"\n• \"What's the emotional dynamic of this chat?\"\n• \"When are response times slowest?\"\n\nUpload a chat to unlock my full potential! 🚀"}
     ]
 
 # Sidebar

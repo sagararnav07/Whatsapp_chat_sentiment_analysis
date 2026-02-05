@@ -10,3 +10,5 @@ plotly
 groq
 requests
 textblob
+sentence-transformers
+scikit-learn
