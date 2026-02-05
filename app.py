@@ -15,9 +15,13 @@ import os
 def get_secret(key, default=""):
     """Get secret from Streamlit secrets or environment variable"""
     try:
-        return st.secrets.get(key, os.environ.get(key, default))
-    except:
-        return os.environ.get(key, default)
+        # Try Streamlit secrets first (works in Streamlit Cloud)
+        if key in st.secrets:
+            return st.secrets[key]
+    except Exception:
+        pass
+    # Fall back to environment variable
+    return os.environ.get(key, default)
 
 # Groq API Configuration
 GROQ_API_KEY = get_secret("GROQ_API_KEY")

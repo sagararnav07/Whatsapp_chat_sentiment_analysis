@@ -9,7 +9,7 @@
 
 **A powerful, AI-enhanced WhatsApp chat analyzer built with Streamlit**
 
-[Live Demo](https://webchatanalyzer.streamlit.app/) · [Report Bug](https://github.com/sagararnav07/Whatsapp_chat_sentiment_analysis/issues) · [Request Feature](https://github.com/sagararnav07/Whatsapp_chat_sentiment_analysis/issues)
+[🚀 Live Demo](https://webchatanalyzer.streamlit.app/) · [Report Bug](https://github.com/sagararnav07/Whatsapp_chat_sentiment_analysis/issues) · [Request Feature](https://github.com/sagararnav07/Whatsapp_chat_sentiment_analysis/issues)
 
 </div>
 
