@@ -6,3 +6,7 @@ wordcloud
 pandas
 numpy
 emoji
+plotly
+groq
+requests
+textblob
