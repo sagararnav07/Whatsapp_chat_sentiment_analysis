@@ -959,105 +959,10 @@ with main_col:
         st.markdown("---")
         st.info("👈 Upload your WhatsApp chat export from the sidebar to get started!")
 
-# AI Chat Panel - Botpress Embedded + Llama Fallback
+# AI Chat Panel - ChatSense AI (Primary) + Botpress (Secondary)
 if st.session_state.show_botpress and bot_col is not None:
     with bot_col:
-        st.markdown("### 🤖 AI Assistant")
-        
-        # Generate chat summary for Botpress
-        chat_summary = generate_chat_summary_for_botpress(
-            st.session_state.df, 
-            st.session_state.get('selected_user', 'Overall')
-        )
-        # Escape for JavaScript
-        chat_summary_escaped = chat_summary.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n').replace('"', '\\"')
-        
-        # Botpress Chat - Embedded directly with chat data
-        botpress_html = f'''
-        <style>
-            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-            #bp-webchat-container {{
-                width: 100% !important;
-                height: 520px !important;
-                position: relative !important;
-                border-radius: 16px;
-                overflow: hidden;
-                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            }}
-            .bp-widget-widget, #bp-web-widget-container {{
-                position: relative !important;
-                width: 100% !important;
-                height: 100% !important;
-                bottom: 0 !important;
-                right: 0 !important;
-            }}
-            .bpFab {{ display: none !important; }}
-        </style>
-        
-        <div id="bp-webchat-container"></div>
-        
-        <script src="https://cdn.botpress.cloud/webchat/v3.5/inject.js"></script>
-        <script>
-            const chatDataJson = '{chat_summary_escaped}';
-            let dataSent = false;
-            
-            window.botpress.on("ready", async function() {{
-                window.botpress.open();
-                
-                // Update user with chat data
-                try {{
-                    const parsed = JSON.parse(chatDataJson);
-                    await window.botpress.updateUser({{
-                        name: "Chat Analyzer User",
-                        data: {{
-                            chatData: chatDataJson,
-                            hasChat: parsed.hasData ? "yes" : "no",
-                            msgCount: String(parsed.totalMessages || 0),
-                            users: (parsed.participants || []).join(", "),
-                            dates: parsed.dateRange || "none"
-                        }}
-                    }});
-                    console.log("User data updated:", parsed);
-                }} catch(e) {{
-                    console.error("updateUser error:", e);
-                }}
-            }});
-            
-            window.botpress.on("webchat:ready", async function() {{
-                if (dataSent) return;
-                dataSent = true;
-                
-                // Send a custom event with the chat data
-                try {{
-                    const parsed = JSON.parse(chatDataJson);
-                    if (parsed.hasData) {{
-                        await window.botpress.sendEvent({{
-                            type: "chatDataLoaded",
-                            payload: {{
-                                hasData: true,
-                                totalMessages: parsed.totalMessages,
-                                participants: parsed.participants,
-                                dateRange: parsed.dateRange,
-                                sentiment: parsed.sentiment,
-                                topEmojis: parsed.topEmojis,
-                                userCounts: parsed.userMessageCounts
-                            }}
-                        }});
-                        console.log("Chat data event sent!");
-                    }}
-                }} catch(e) {{
-                    console.error("sendEvent error:", e);
-                }}
-            }});
-        </script>
-        <script src="https://files.bpcontent.cloud/2025/04/05/17/20250405174729-R1ZMSM15.js?v={int(datetime.now().timestamp())}"></script>
-        '''
-        st.components.v1.html(botpress_html, height=540)
-        
-        st.markdown("---")
-        
-        # Main AI Chat - ChatSense AI (Llama 3.3)
+        # PRIMARY: ChatSense AI (Llama 3.3)
         st.markdown("### 🤖 ChatSense AI")
         st.caption("Powered by Llama 3.3 70B • Remembers conversation • Analyzes your data")
         
@@ -1068,7 +973,7 @@ if st.session_state.show_botpress and bot_col is not None:
             st.info("📁 Upload a chat to unlock intelligent analysis")
         
         # Chat container - show more messages
-        chat_container = st.container(height=350)
+        chat_container = st.container(height=400)
         with chat_container:
             for msg in st.session_state.chat_messages[-10:]:  # Show last 10 messages
                 with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "👤"):
@@ -1093,3 +998,51 @@ if st.session_state.show_botpress and bot_col is not None:
         if len(st.session_state.chat_messages) > 1:
             if st.button("🗑️ Clear Chat", key="clear_chat"):
                 st.session_state.chat_messages = [st.session_state.chat_messages[0]]  # Keep welcome message
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # SECONDARY: Botpress in expander
+        with st.expander("💬 Botpress Chat (Alternative)", expanded=False):
+            st.caption("Alternative chatbot powered by Botpress")
+            
+            # Generate chat summary for Botpress
+            chat_summary = generate_chat_summary_for_botpress(
+                st.session_state.df, 
+                st.session_state.get('selected_user', 'Overall')
+            )
+            # Escape for JavaScript
+            chat_summary_escaped = chat_summary.replace('\\', '\\\\').replace("'", "\\'").replace('\n', '\\n').replace('"', '\\"')
+            
+            # Botpress Chat - Embedded
+            botpress_html = f'''
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                #bp-webchat-container {{
+                    width: 100% !important;
+                    height: 450px !important;
+                    position: relative !important;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                }}
+                .bp-widget-widget, #bp-web-widget-container {{
+                    position: relative !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                }}
+                .bpFab {{ display: none !important; }}
+            </style>
+            
+            <div id="bp-webchat-container"></div>
+            
+            <script src="https://cdn.botpress.cloud/webchat/v3.5/inject.js"></script>
+            <script>
+                const chatDataJson = '{chat_summary_escaped}';
+                window.botpress.on("ready", async function() {{
+                    window.botpress.open();
+                }});
+            </script>
+            <script src="https://files.bpcontent.cloud/2025/04/05/17/20250405174729-R1ZMSM15.js?v={int(datetime.now().timestamp())}"></script>
+            '''
+            st.components.v1.html(botpress_html, height=470)
