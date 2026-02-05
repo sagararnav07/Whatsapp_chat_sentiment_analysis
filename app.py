@@ -264,9 +264,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Intelligent AI Chat using Groq (Llama 3.1)
-def get_bot_response(user_message, df=None, selected_user="Overall"):
-    """Get intelligent AI response using Groq API"""
+# Intelligent AI Chat using Groq (Llama 3.3) with conversation memory
+def get_bot_response(user_message, df=None, selected_user="Overall", conversation_history=None):
+    """Get intelligent AI response using Groq API with conversation memory"""
     
     # Build context about the chat data
     chat_context = ""
@@ -296,9 +296,18 @@ def get_bot_response(user_message, df=None, selected_user="Overall"):
             # Media count
             media_count = df[df['message'].str.contains('<Media omitted>', case=False, na=False)].shape[0]
             
-            # Sample recent messages (last 50 for context)
+            # Sample recent messages (more for better context)
             sample_msgs = df.tail(100)[['user', 'message']].values.tolist()
-            sample_text = "\n".join([f"{m[0]}: {m[1][:100]}" for m in sample_msgs[-30:]])
+            sample_text = "\n".join([f"{m[0]}: {m[1][:150]}" for m in sample_msgs[-50:]])
+            
+            # Word frequency analysis
+            try:
+                from collections import Counter
+                all_words = ' '.join(df['message'].astype(str)).lower().split()
+                common_words = Counter([w for w in all_words if len(w) > 3]).most_common(15)
+                common_words_text = ", ".join([f"{w[0]} ({w[1]}x)" for w in common_words])
+            except:
+                common_words_text = "Not available"
             
             # Emoji analysis
             try:
@@ -331,7 +340,7 @@ def get_bot_response(user_message, df=None, selected_user="Overall"):
 - **Currently Viewing**: {selected_user}
 
 ## MESSAGE COUNTS BY USER:
-{chr(10).join([f"- {user}: {count} messages" for user, count in user_counts.items()])}
+{chr(10).join([f"- {user}: {count} messages ({round(count/total_msgs*100, 1)}%)" for user, count in user_counts.items()])}
 
 ## TOP EMOJIS:
 {chr(10).join([f"- {e['Emoji']}: {e['Count']} times" for e in top_emojis]) if top_emojis else "No emoji data"}
@@ -339,7 +348,10 @@ def get_bot_response(user_message, df=None, selected_user="Overall"):
 ## SENTIMENT ANALYSIS:
 {sentiment_info}
 
-## RECENT MESSAGES SAMPLE:
+## MOST COMMON WORDS:
+{common_words_text}
+
+## RECENT MESSAGES SAMPLE (for context):
 {sample_text}
 """
         except Exception as e:
@@ -347,44 +359,70 @@ def get_bot_response(user_message, df=None, selected_user="Overall"):
     else:
         chat_context = "No chat has been uploaded yet."
     
-    # System prompt
-    system_prompt = f"""You are an intelligent AI assistant for a WhatsApp Chat Sentiment Analysis app. You help users understand their WhatsApp conversations and the app's features.
+    # System prompt - Enhanced for better intelligence
+    system_prompt = f"""You are ChatSense AI 🤖, an expert WhatsApp chat analyst. You're highly intelligent, insightful, and can provide deep analysis of conversations.
 
 {chat_context}
 
-## YOUR CAPABILITIES:
-1. Answer questions about the uploaded chat data (participants, message counts, activity patterns, etc.)
-2. Explain app features (sentiment analysis, emoji tracking, activity patterns, word clouds)
-3. Help users export WhatsApp chats (Android and iPhone instructions)
-4. Provide insights about conversation patterns
-5. Compare users' activity and messaging styles
+## YOUR SUPERPOWERS:
+1. **Data Analysis** - Analyze message counts, word frequencies, timing patterns
+2. **Relationship Insights** - Understand communication dynamics between participants
+3. **Behavioral Patterns** - Identify who initiates conversations, response patterns, active hours
+4. **Emotional Intelligence** - Interpret sentiment, tone, and mood from messages
+5. **Trend Detection** - Spot changes in communication over time
 
-## GUIDELINES:
-- Be friendly and use emojis occasionally 😊
-- Give specific numbers and data when available
-- Keep responses concise but informative
-- If asked about specific messages or conversations, use the sample messages provided
-- If no chat is uploaded, guide users on how to upload one
-- For export instructions: Android (⋮ → More → Export) and iPhone (Contact name → Export Chat)
+## SMART ANALYSIS TIPS:
+- Calculate percentages (e.g., "User A sends 65% of messages")
+- Compare users (e.g., "User A is 2x more active than User B")
+- Identify peak hours and what that might mean
+- Notice patterns in message samples
+- Infer relationship dynamics from the data
 
-## APP FEATURES TO EXPLAIN:
-- 📊 Overview: Total messages, words, media, links, daily trends
-- 💭 Sentiment: Positive/Negative/Neutral message breakdown using TextBlob
-- 😀 Emojis: Top emojis used, per-user emoji analysis
-- ⏰ Activity: 24-hour patterns, weekly heatmap, response times, night owl detection
-- 🔍 Deep Dive: Word clouds, common words, chat streaks"""
+## WHEN ANSWERING:
+- Start with the direct answer, then provide context
+- Use specific numbers from the data
+- Add insights and observations
+- Be conversational and engaging
+- Use relevant emojis to make responses lively 😊📊💬
+
+## EXAMPLE SMART RESPONSES:
+- "There are 289 messages! 📊 Kartik leads with 168 (58%), while Arnav sent 121 (42%). Looks like Kartik is the more active texter!"
+- "Peak hour is 12:00 PM 🕐 - seems like lunch break chats! Night owls? Let me check the late-night activity..."
+- "The sentiment is mostly neutral, which is typical for casual friend chats. Want me to look for specific emotional moments?"
+
+## APP FEATURES YOU CAN EXPLAIN:
+- 📊 Overview Tab: Stats, trends, daily message counts
+- 💭 Sentiment Tab: AI-powered mood analysis
+- 😀 Emoji Tab: Who uses which emojis most
+- ⏰ Activity Tab: When people chat, response times, night owl detection
+- 🔍 Deep Dive: Word clouds, common words, chat streaks
+
+## IF NO CHAT UPLOADED:
+Guide them: "Upload your WhatsApp chat (.txt file) using the sidebar to unlock powerful insights! 📁"
+
+Remember: You have access to the ACTUAL chat data above. Use it to give personalized, specific answers!"""
 
     try:
         if not groq_client:
             return "❌ AI is not configured. Please set up the GROQ_API_KEY in secrets."
         
+        # Build messages with conversation history for context
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add conversation history for memory (last 6 exchanges)
+        if conversation_history and len(conversation_history) > 1:
+            # Skip the initial greeting, take last 6 messages
+            recent_history = conversation_history[-7:-1] if len(conversation_history) > 7 else conversation_history[1:-1]
+            for msg in recent_history:
+                messages.append({"role": msg["role"], "content": msg["content"][:500]})  # Truncate for token limit
+        
+        # Add current user message
+        messages.append({"role": "user", "content": user_message})
+        
         # Call Groq API with Llama 3.3 (latest model)
         response = groq_client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message}
-            ],
+            messages=messages,
             temperature=0.7,
             max_tokens=1024,
         )
@@ -456,7 +494,7 @@ if 'show_botpress' not in st.session_state:
     st.session_state.show_botpress = True
 if 'chat_messages' not in st.session_state:
     st.session_state.chat_messages = [
-        {"role": "assistant", "content": "👋 Hi! I'm your AI assistant powered by **Llama 3.3**! 🦙\n\nI can answer any questions about:\n• 📊 Your uploaded WhatsApp chat data\n• 📱 How to export and use this app\n• 💭 Sentiment analysis, emoji patterns, activity insights\n\nUpload a chat and ask me anything! 😊"}
+        {"role": "assistant", "content": "👋 Hey there! I'm **ChatSense AI** 🤖 - your intelligent WhatsApp analyst!\n\n**What I can do:**\n• 📊 Analyze your chat data in depth\n• 🔍 Find patterns & insights you might miss\n• 💬 Answer any question about your conversations\n• 🧠 Remember our conversation for context\n\n**Try asking me:**\n• \"How many messages are there?\"\n• \"Who talks more?\"\n• \"What's the vibe of this chat?\"\n• \"When are we most active?\"\n\nUpload a chat to get started! 🚀"}
     ]
 
 # Sidebar
@@ -1017,30 +1055,41 @@ if st.session_state.show_botpress and bot_col is not None:
         '''
         st.components.v1.html(botpress_html, height=540)
         
-        # Show status indicator
-        if st.session_state.df is not None:
-            st.success("✅ Chat data synced with AI")
-        else:
-            st.info("📁 Upload a chat to enable data-aware responses")
+        st.markdown("---")
         
-        # Expander for Llama 3.3 (data-aware) as backup
-        with st.expander("🦙 Llama 3.3 (Local Analysis)", expanded=False):
-            if st.session_state.df is not None:
-                st.success("✅ Chat loaded!")
-            else:
-                st.caption("📁 Upload a chat for data questions")
-            
-            # Mini chat container
-            mini_chat = st.container(height=200)
-            with mini_chat:
-                for msg in st.session_state.chat_messages[-4:]:  # Show last 4 messages
-                    with st.chat_message(msg["role"]):
-                        st.markdown(msg["content"][:200] + "..." if len(msg["content"]) > 200 else msg["content"])
-            
-            if prompt := st.chat_input("Ask Llama...", key="llama_input"):
-                st.session_state.chat_messages.append({"role": "user", "content": prompt})
-                selected_user = st.session_state.get('selected_user', 'Overall')
-                with st.spinner("🤔"):
-                    response = get_bot_response(prompt, st.session_state.df, selected_user)
-                st.session_state.chat_messages.append({"role": "assistant", "content": response})
-                st.rerun()
+        # Main AI Chat - ChatSense AI (Llama 3.3)
+        st.markdown("### 🤖 ChatSense AI")
+        st.caption("Powered by Llama 3.3 70B • Remembers conversation • Analyzes your data")
+        
+        # Status indicator
+        if st.session_state.df is not None:
+            st.success("✅ Chat data loaded - I can answer specific questions!")
+        else:
+            st.info("📁 Upload a chat to unlock intelligent analysis")
+        
+        # Chat container - show more messages
+        chat_container = st.container(height=350)
+        with chat_container:
+            for msg in st.session_state.chat_messages[-10:]:  # Show last 10 messages
+                with st.chat_message(msg["role"], avatar="🤖" if msg["role"] == "assistant" else "👤"):
+                    st.markdown(msg["content"])
+        
+        # Chat input
+        if prompt := st.chat_input("Ask me anything about your chat...", key="llama_input"):
+            st.session_state.chat_messages.append({"role": "user", "content": prompt})
+            selected_user = st.session_state.get('selected_user', 'Overall')
+            with st.spinner("🧠 Thinking..."):
+                # Pass conversation history for memory
+                response = get_bot_response(
+                    prompt, 
+                    st.session_state.df, 
+                    selected_user,
+                    conversation_history=st.session_state.chat_messages
+                )
+            st.session_state.chat_messages.append({"role": "assistant", "content": response})
+            st.rerun()
+        
+        # Clear chat button
+        if len(st.session_state.chat_messages) > 1:
+            if st.button("🗑️ Clear Chat", key="clear_chat"):
+                st.session_state.chat_messages = [st.session_state.chat_messages[0]]  # Keep welcome message
