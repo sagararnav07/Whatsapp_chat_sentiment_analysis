@@ -1,0 +1,117 @@
+# Rasa Analyser — Conversation Stories
+# ======================================
+# Defines multi-turn conversation flows.
+
+version: "3.1"
+
+stories:
+
+# ── Greet + Ask for help ─────────────────────────────────────────────────────
+- story: greet and help
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: ask_help
+    - action: utter_help
+
+# ── Date query flow ──────────────────────────────────────────────────────────
+- story: ask date messages
+  steps:
+    - intent: ask_date_messages
+    - action: action_analyze_date
+
+- story: greet then date query
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: ask_date_messages
+    - action: action_analyze_date
+
+# ── Speaker query flow ───────────────────────────────────────────────────────
+- story: ask speaker messages
+  steps:
+    - intent: ask_speaker_messages
+    - action: action_analyze_speaker
+
+- story: greet then speaker query
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: ask_speaker_messages
+    - action: action_analyze_speaker
+
+# ── Date + Speaker combined ──────────────────────────────────────────────────
+- story: ask date speaker messages
+  steps:
+    - intent: ask_date_speaker_messages
+    - action: action_analyze_date_speaker
+
+# ── Summary flow ─────────────────────────────────────────────────────────────
+- story: ask summary
+  steps:
+    - intent: ask_summary
+    - action: action_analyze_summary
+
+# ── Sentiment flow ───────────────────────────────────────────────────────────
+- story: ask sentiment
+  steps:
+    - intent: ask_sentiment
+    - action: action_analyze_sentiment
+
+# ── Desire detection flow ────────────────────────────────────────────────────
+- story: ask desire detection
+  steps:
+    - intent: ask_desire_detection
+    - action: action_analyze_desire
+
+# ── Emotional spikes flow ────────────────────────────────────────────────────
+- story: ask emotional spikes
+  steps:
+    - intent: ask_emotional_spikes
+    - action: action_analyze_emotions
+
+# ── Media shared flow ────────────────────────────────────────────────────────
+- story: ask media shared
+  steps:
+    - intent: ask_media_shared
+    - action: action_analyze_media
+
+# ── Activity pattern flow ────────────────────────────────────────────────────
+- story: ask activity pattern
+  steps:
+    - intent: ask_activity_pattern
+    - action: action_analyze_activity
+
+# ── General flow ─────────────────────────────────────────────────────────────
+- story: ask general
+  steps:
+    - intent: ask_general
+    - action: action_analyze_general
+
+# ── Multi-turn: date then speaker ────────────────────────────────────────────
+- story: date then speaker follow-up
+  steps:
+    - intent: ask_date_messages
+    - action: action_analyze_date
+    - intent: ask_speaker_messages
+    - action: action_analyze_speaker
+
+# ── Multi-turn: speaker then date ────────────────────────────────────────────
+- story: speaker then date follow-up
+  steps:
+    - intent: ask_speaker_messages
+    - action: action_analyze_speaker
+    - intent: ask_date_messages
+    - action: action_analyze_date
+
+# ── Goodbye flow ─────────────────────────────────────────────────────────────
+- story: goodbye
+  steps:
+    - intent: goodbye
+    - action: utter_goodbye
+
+# ── Out of scope ─────────────────────────────────────────────────────────────
+- story: out of scope
+  steps:
+    - intent: out_of_scope
+    - action: utter_out_of_scope

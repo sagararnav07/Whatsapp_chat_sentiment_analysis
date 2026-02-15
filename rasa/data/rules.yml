@@ -1,0 +1,100 @@
+# Rasa Analyser — Rules
+# ======================
+# Rules are deterministic — they always trigger for specific intents.
+
+version: "3.1"
+
+rules:
+
+# ── Greet ────────────────────────────────────────────────────────────────────
+- rule: Respond to greeting
+  steps:
+    - intent: greet
+    - action: utter_greet
+
+# ── Goodbye ──────────────────────────────────────────────────────────────────
+- rule: Respond to goodbye
+  steps:
+    - intent: goodbye
+    - action: utter_goodbye
+
+# ── Help ─────────────────────────────────────────────────────────────────────
+- rule: Respond to help
+  steps:
+    - intent: ask_help
+    - action: utter_help
+
+# ── Affirm ───────────────────────────────────────────────────────────────────
+- rule: Respond to affirm
+  steps:
+    - intent: affirm
+    - action: utter_affirm
+
+# ── Deny ─────────────────────────────────────────────────────────────────────
+- rule: Respond to deny
+  steps:
+    - intent: deny
+    - action: utter_deny
+
+# ── Out of scope ─────────────────────────────────────────────────────────────
+- rule: Respond to out of scope
+  steps:
+    - intent: out_of_scope
+    - action: utter_out_of_scope
+
+# ── Fallback — low NLU confidence ────────────────────────────────────────────
+- rule: Ask rephrase on low confidence
+  steps:
+    - intent: nlu_fallback
+    - action: utter_default
+
+# ── Analysis actions (deterministic mapping) ─────────────────────────────────
+- rule: Handle date messages query
+  steps:
+    - intent: ask_date_messages
+    - action: action_analyze_date
+
+- rule: Handle speaker messages query
+  steps:
+    - intent: ask_speaker_messages
+    - action: action_analyze_speaker
+
+- rule: Handle date + speaker query
+  steps:
+    - intent: ask_date_speaker_messages
+    - action: action_analyze_date_speaker
+
+- rule: Handle summary query
+  steps:
+    - intent: ask_summary
+    - action: action_analyze_summary
+
+- rule: Handle sentiment query
+  steps:
+    - intent: ask_sentiment
+    - action: action_analyze_sentiment
+
+- rule: Handle desire detection query
+  steps:
+    - intent: ask_desire_detection
+    - action: action_analyze_desire
+
+- rule: Handle emotional spikes query
+  steps:
+    - intent: ask_emotional_spikes
+    - action: action_analyze_emotions
+
+- rule: Handle media shared query
+  steps:
+    - intent: ask_media_shared
+    - action: action_analyze_media
+
+- rule: Handle activity pattern query
+  steps:
+    - intent: ask_activity_pattern
+    - action: action_analyze_activity
+
+- rule: Handle general query
+  steps:
+    - intent: ask_general
+    - action: action_analyze_general

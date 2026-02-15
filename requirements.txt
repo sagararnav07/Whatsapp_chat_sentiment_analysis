@@ -12,3 +12,4 @@ requests
 textblob
 sentence-transformers
 scikit-learn
+faiss-cpu

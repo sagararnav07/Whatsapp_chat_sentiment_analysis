@@ -1,0 +1,120 @@
+# Rasa Analyser — Domain Configuration
+# ======================================
+# Defines intents, entities, slots, responses, and actions
+# for the WhatsApp Chat Analyser Rasa bot.
+
+version: "3.1"
+
+# ── Intents ──────────────────────────────────────────────────────────────────
+intents:
+  - greet
+  - goodbye
+  - affirm
+  - deny
+  - ask_date_messages
+  - ask_speaker_messages
+  - ask_date_speaker_messages
+  - ask_summary
+  - ask_sentiment
+  - ask_desire_detection
+  - ask_emotional_spikes
+  - ask_media_shared
+  - ask_activity_pattern
+  - ask_general
+  - ask_help
+  - out_of_scope
+  - nlu_fallback
+
+# ── Entities ─────────────────────────────────────────────────────────────────
+entities:
+  - speaker
+  - date
+  - topic
+
+# ── Slots ────────────────────────────────────────────────────────────────────
+slots:
+  speaker:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: speaker
+  date:
+    type: text
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: date
+  topic:
+    type: text
+    influence_conversation: false
+    mappings:
+      - type: from_entity
+        entity: topic
+  chat_loaded:
+    type: bool
+    initial_value: false
+    influence_conversation: true
+    mappings:
+      - type: custom
+
+# ── Responses ────────────────────────────────────────────────────────────────
+responses:
+  utter_greet:
+    - text: "👋 Hello! I'm **Rasa Analyser** — your WhatsApp chat intelligence assistant.\n\nI can help you with:\n- 📅 Date-based queries\n- 👤 Speaker-based queries\n- 💭 Desire & intent detection\n- ⚡ Emotional spike analysis\n- 📊 Chat summaries\n\nUpload a chat file and ask me anything!"
+
+  utter_goodbye:
+    - text: "Goodbye! Feel free to come back anytime for more chat analysis. 👋"
+
+  utter_help:
+    - text: |
+        Here's what you can ask me:
+
+        📅 **Date Queries**: "What was said on 17th October?"
+        👤 **Speaker Queries**: "What did Arnav say?"
+        📅👤 **Combined**: "What did Kartik say on 25th December?"
+        📊 **Summary**: "Summarize the chat"
+        💭 **Desires**: "Did anyone wish for something?"
+        ⚡ **Emotions**: "When did arguments happen?"
+        🖼️ **Media**: "What media was shared?"
+        ⏰ **Activity**: "When are they most active?"
+
+  utter_no_chat_loaded:
+    - text: "📁 No chat data loaded yet. Please upload a WhatsApp chat export first!"
+
+  utter_out_of_scope:
+    - text: "I'm specialized in WhatsApp chat analysis. Could you rephrase your question about the chat data?"
+
+  utter_default:
+    - text: "I'm not sure I understood that. Try asking about specific dates, speakers, or topics from the chat. Type 'help' for examples."
+
+  utter_affirm:
+    - text: "Great! What would you like to know about the chat?"
+
+  utter_deny:
+    - text: "No problem. Let me know if you need anything else."
+
+  utter_ask_date:
+    - text: "Which date would you like me to look at? (e.g., 15/11/25 or 17th October 2025)"
+
+  utter_ask_speaker:
+    - text: "Which speaker's messages are you interested in?"
+
+# ── Actions ──────────────────────────────────────────────────────────────────
+actions:
+  - action_analyze_date
+  - action_analyze_speaker
+  - action_analyze_date_speaker
+  - action_analyze_summary
+  - action_analyze_sentiment
+  - action_analyze_desire
+  - action_analyze_emotions
+  - action_analyze_media
+  - action_analyze_activity
+  - action_analyze_general
+  - action_default_fallback
+
+# ── Session config ───────────────────────────────────────────────────────────
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

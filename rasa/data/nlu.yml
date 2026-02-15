@@ -1,0 +1,256 @@
+# Rasa Analyser — NLU Training Data
+# ====================================
+# Intent classification and entity extraction examples
+# for WhatsApp chat analysis queries.
+
+version: "3.1"
+
+nlu:
+
+# ── Greetings ────────────────────────────────────────────────────────────────
+- intent: greet
+  examples: |
+    - hey
+    - hello
+    - hi
+    - hello there
+    - good morning
+    - good evening
+    - hey there
+    - hi bot
+    - yo
+    - sup
+    - hey rasa
+    - hi rasa analyser
+
+# ── Goodbye ──────────────────────────────────────────────────────────────────
+- intent: goodbye
+  examples: |
+    - bye
+    - goodbye
+    - see you
+    - see ya
+    - take care
+    - bye bye
+    - later
+    - thanks bye
+
+# ── Affirm ───────────────────────────────────────────────────────────────────
+- intent: affirm
+  examples: |
+    - yes
+    - yep
+    - yeah
+    - correct
+    - sure
+    - ok
+    - of course
+    - right
+    - haan
+    - ha
+
+# ── Deny ─────────────────────────────────────────────────────────────────────
+- intent: deny
+  examples: |
+    - no
+    - nope
+    - nah
+    - not really
+    - never
+    - I don't think so
+    - nahi
+
+# ── Date-based queries ───────────────────────────────────────────────────────
+- intent: ask_date_messages
+  examples: |
+    - what was said on [15/11/25](date)?
+    - what happened on [17th October 2025](date)?
+    - show me messages from [25/12/25](date)
+    - messages on [10/10/25](date)
+    - what's on [13 October 2025](date)?
+    - anything on [27/11/25](date)?
+    - show [30/10/25](date) messages
+    - what occurred on [09/12/25](date)?
+    - chat on [01/12/25](date)
+    - tell me about [17/11/25](date)
+    - what was discussed on [12/11/25](date)?
+    - conversations from [25/01/26](date)
+    - show chat from [31 December 2025](date)
+    - what happened on [November 15](date)?
+    - messages from [October 17](date)
+
+# ── Speaker-based queries ────────────────────────────────────────────────────
+- intent: ask_speaker_messages
+  examples: |
+    - what did [Arnav](speaker) say?
+    - show me [Kartik](speaker)'s messages
+    - [Arnav](speaker)'s messages
+    - what has [Kartik Infy](speaker) said?
+    - messages from [Arnav](speaker)
+    - show [Kartik](speaker) messages
+    - what did [Arnav](speaker) talk about?
+    - everything [Kartik Infy](speaker) said
+    - [Arnav](speaker) ke messages dikhao
+    - what about [Kartik](speaker)?
+
+# ── Date + Speaker queries ───────────────────────────────────────────────────
+- intent: ask_date_speaker_messages
+  examples: |
+    - what did [Arnav](speaker) say on [15/11/25](date)?
+    - [Kartik](speaker) messages on [17/10/25](date)
+    - what did [Arnav](speaker) send on [25/12/25](date)?
+    - show [Kartik Infy](speaker)'s messages from [27/11/25](date)
+    - [Arnav](speaker) on [09/12/25](date)
+    - what was [Kartik](speaker) saying on [12/11/25](date)?
+    - did [Arnav](speaker) say anything on [15 November 2025](date)?
+    - [Kartik Infy](speaker) messages on [October 17](date)
+    - what did [Arnav](speaker) write on [30/10/25](date)?
+    - show me what [Kartik](speaker) said on [January 17 2026](date)
+
+# ── Summary queries ──────────────────────────────────────────────────────────
+- intent: ask_summary
+  examples: |
+    - summarize the chat
+    - give me a summary
+    - overview of the conversation
+    - what's the chat about?
+    - brief summary
+    - summarize everything
+    - what are the main topics?
+    - give me an overview
+    - chat summary
+    - what did they talk about overall?
+    - tl;dr
+    - highlight the key points
+    - main discussion topics
+
+# ── Sentiment queries ────────────────────────────────────────────────────────
+- intent: ask_sentiment
+  examples: |
+    - what's the sentiment?
+    - how's the mood of the chat?
+    - is the conversation positive or negative?
+    - sentiment analysis
+    - are they happy or angry?
+    - what's the tone?
+    - overall mood
+    - how do they feel?
+    - is the vibe positive?
+    - emotional tone of the chat
+
+# ── Desire / intent detection ────────────────────────────────────────────────
+- intent: ask_desire_detection
+  examples: |
+    - did anyone wish for something?
+    - what did [Arnav](speaker) want?
+    - any desires expressed?
+    - did [Kartik](speaker) ever need something?
+    - wishes and wants in the chat
+    - implicit desires
+    - what are their needs?
+    - did anyone ask for something?
+    - unspoken wishes
+    - what do they want?
+    - did [Arnav](speaker) ever want something?
+    - emotional needs expressed
+
+# ── Emotional spikes / arguments ─────────────────────────────────────────────
+- intent: ask_emotional_spikes
+  examples: |
+    - when did arguments happen?
+    - any fights in the chat?
+    - were there any conflicts?
+    - emotional moments
+    - when did they argue?
+    - heated conversations
+    - any tension?
+    - did they fight?
+    - angry moments
+    - when was the chat intense?
+    - emotional spikes
+    - conflict detection
+
+# ── Media shared ─────────────────────────────────────────────────────────────
+- intent: ask_media_shared
+  examples: |
+    - what media was shared?
+    - how many images were sent?
+    - any photos shared?
+    - documents shared in the chat
+    - media count
+    - images and videos
+    - what files were shared?
+    - how much media?
+    - any attachments?
+    - pictures shared
+
+# ── Activity patterns ────────────────────────────────────────────────────────
+- intent: ask_activity_pattern
+  examples: |
+    - when are they most active?
+    - peak chat hours
+    - busiest day
+    - activity pattern
+    - most active time
+    - when do they chat the most?
+    - chat frequency
+    - daily activity
+    - weekly pattern
+    - most messages sent when?
+
+# ── General chat questions ───────────────────────────────────────────────────
+- intent: ask_general
+  examples: |
+    - tell me about the chat
+    - who chats more?
+    - how many messages are there?
+    - chat statistics
+    - who sends more messages?
+    - total message count
+    - how long is the chat?
+    - date range of the chat
+    - participants
+    - who are the speakers?
+    - how many words?
+
+# ── Help ─────────────────────────────────────────────────────────────────────
+- intent: ask_help
+  examples: |
+    - help
+    - what can you do?
+    - how do I use this?
+    - what should I ask?
+    - commands
+    - features
+    - capabilities
+
+# ── Out of scope ─────────────────────────────────────────────────────────────
+- intent: out_of_scope
+  examples: |
+    - what's the weather?
+    - tell me a joke
+    - who is the president?
+    - play music
+    - order pizza
+    - what time is it?
+    - calculate 2+2
+    - translate this
+
+
+# ── Regex patterns for entity extraction ─────────────────────────────────────
+regex:
+  - name: date
+    examples: |
+      - \d{1,2}/\d{1,2}/\d{2,4}
+      - \d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}
+      - (?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?
+
+# ── Lookup tables for speakers ───────────────────────────────────────────────
+# NOTE: These are examples — in production, speaker names are
+# dynamically extracted from the uploaded chat file.
+lookup:
+  - name: speaker
+    examples: |
+      - Arnav
+      - Kartik
+      - Kartik Infy

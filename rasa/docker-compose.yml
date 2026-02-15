@@ -1,0 +1,62 @@
+# Rasa Analyser — Docker Compose
+# =================================
+# Runs Rasa server + Action server as separate containers.
+#
+# Usage:
+#   cd rasa/
+#   docker-compose up --build
+#
+# The Rasa server will be available at http://localhost:5005
+# The action server will be available at http://localhost:5055
+
+version: "3.8"
+
+services:
+  # ── Rasa Server ──────────────────────────────────────────────────────────
+  rasa-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: rasa-server
+    container_name: rasa_analyser_server
+    ports:
+      - "5005:5005"
+    depends_on:
+      action-server:
+        condition: service_healthy
+    environment:
+      - RASA_DATA_API_URL=${RASA_DATA_API_URL:-http://host.docker.internal:8501}
+    volumes:
+      - ./models:/app/models
+    restart: unless-stopped
+    networks:
+      - rasa-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Custom Action Server ────────────────────────────────────────────────
+  action-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: action-server
+    container_name: rasa_analyser_actions
+    ports:
+      - "5055:5055"
+    environment:
+      - RASA_DATA_API_URL=${RASA_DATA_API_URL:-http://host.docker.internal:8501}
+    restart: unless-stopped
+    networks:
+      - rasa-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5055/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  rasa-network:
+    driver: bridge

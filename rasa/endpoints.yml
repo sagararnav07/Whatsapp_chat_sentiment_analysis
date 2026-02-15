@@ -1,0 +1,13 @@
+# Rasa Analyser — Endpoints Configuration
+# =========================================
+# Tells Rasa where to find the custom action server.
+
+action_endpoint:
+  url: "http://action-server:5055/webhook"
+
+# Tracker store — use in-memory for development
+# For production, switch to a database:
+# tracker_store:
+#   type: sql
+#   dialect: sqlite
+#   db: tracker.db

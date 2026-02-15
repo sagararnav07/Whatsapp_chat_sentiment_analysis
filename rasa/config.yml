@@ -1,0 +1,65 @@
+# Rasa Analyser — Pipeline Configuration
+# ========================================
+# This configuration uses the recommended Rasa pipeline for
+# intent classification and entity extraction on chat-analysis queries.
+
+recipe: default.v1
+language: en
+
+pipeline:
+  # Tokenizer — splits text into tokens
+  - name: WhitespaceTokenizer
+
+  # Regex featurizer — captures date patterns, speaker names
+  - name: RegexFeaturizer
+
+  # Lexical syntactic featurizer — POS-like features
+  - name: LexicalSyntacticFeaturizer
+
+  # Count vectors for bag-of-words features
+  - name: CountVectorsFeaturizer
+  - name: CountVectorsFeaturizer
+    analyzer: char_wb
+    min_ngram: 1
+    max_ngram: 4
+
+  # Intent classifier
+  - name: DIETClassifier
+    epochs: 100
+    constrain_similarities: true
+
+  # Entity extraction
+  - name: EntitySynonymMapper
+
+  # Regex-based entity extractor for dates
+  - name: RegexEntityExtractor
+    case_sensitive: false
+    use_lookup_tables: false
+    use_regexes: true
+    use_word_boundaries: true
+
+  # Response selector for FAQ/chitchat
+  - name: ResponseSelector
+    epochs: 100
+    constrain_similarities: true
+
+  # Fallback classifier — triggers fallback if confidence is low
+  - name: FallbackClassifier
+    threshold: 0.4
+    ambiguity_threshold: 0.1
+
+policies:
+  # Memoization — remembers exact story patterns
+  - name: MemoizationPolicy
+
+  # Rule-based policy
+  - name: RulePolicy
+    core_fallback_threshold: 0.4
+    core_fallback_action_name: action_default_fallback
+    enable_fallback_prediction: true
+
+  # TED policy for generalization
+  - name: TEDPolicy
+    max_history: 5
+    epochs: 100
+    constrain_similarities: true
